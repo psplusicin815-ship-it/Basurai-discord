@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
@@ -10,6 +9,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: bot
+    description: Discord bot panel operations
 paths:
   /healthz:
     get:
@@ -24,6 +25,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /bot/stats:
+    get:
+      operationId: getBotStats
+      tags: [bot]
+      summary: Get bot statistics
+      responses:
+        "200":
+          description: Bot statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotStats"
+
+  /bot/logs:
+    get:
+      operationId: getBotLogs
+      tags: [bot]
+      summary: Get bot activity logs
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: guildId
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+        - name: actionType
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Bot logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotLogsResponse"
+
+  /bot/guilds:
+    get:
+      operationId: getBotGuilds
+      tags: [bot]
+      summary: Get list of guilds the bot is in
+      responses:
+        "200":
+          description: Guild list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GuildSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +100,94 @@ components:
       required:
         - status
 
+    BotStats:
+      type: object
+      properties:
+        totalMessages:
+          type: integer
+        totalCommands:
+          type: integer
+        totalGuilds:
+          type: integer
+        totalUsers:
+          type: integer
+        todayMessages:
+          type: integer
+      required:
+        - totalMessages
+        - totalCommands
+        - totalGuilds
+        - totalUsers
+        - todayMessages
+
+    BotLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        guildId:
+          type: string
+        guildName:
+          type: string
+        channelId:
+          type: string
+        channelName:
+          type: string
+        userId:
+          type: string
+        username:
+          type: string
+        messageContent:
+          type: string
+        actionType:
+          type: string
+        actionResult:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - guildId
+        - guildName
+        - channelId
+        - channelName
+        - userId
+        - username
+        - messageContent
+        - actionType
+        - createdAt
+
+    BotLogsResponse:
+      type: object
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/BotLog"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - logs
+        - total
+        - page
+        - limit
+
+    GuildSummary:
+      type: object
+      properties:
+        guildId:
+          type: string
+        guildName:
+          type: string
+        messageCount:
+          type: integer
+      required:
+        - guildId
+        - guildName
+        - messageCount

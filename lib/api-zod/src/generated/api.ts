@@ -14,3 +14,59 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary Get bot statistics
+ */
+export const GetBotStatsResponse = zod.object({
+  totalMessages: zod.number(),
+  totalCommands: zod.number(),
+  totalGuilds: zod.number(),
+  totalUsers: zod.number(),
+  todayMessages: zod.number(),
+});
+
+/**
+ * @summary Get bot activity logs
+ */
+export const getBotLogsQueryPageDefault = 1;
+export const getBotLogsQueryLimitDefault = 50;
+
+export const GetBotLogsQueryParams = zod.object({
+  page: zod.coerce.number().default(getBotLogsQueryPageDefault),
+  limit: zod.coerce.number().default(getBotLogsQueryLimitDefault),
+  guildId: zod.coerce.string().optional(),
+  userId: zod.coerce.string().optional(),
+  actionType: zod.coerce.string().optional(),
+});
+
+export const GetBotLogsResponse = zod.object({
+  logs: zod.array(
+    zod.object({
+      id: zod.number(),
+      guildId: zod.string(),
+      guildName: zod.string(),
+      channelId: zod.string(),
+      channelName: zod.string(),
+      userId: zod.string(),
+      username: zod.string(),
+      messageContent: zod.string(),
+      actionType: zod.string(),
+      actionResult: zod.string().nullish(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  limit: zod.number(),
+});
+
+/**
+ * @summary Get list of guilds the bot is in
+ */
+export const GetBotGuildsResponseItem = zod.object({
+  guildId: zod.string(),
+  guildName: zod.string(),
+  messageCount: zod.number(),
+});
+export const GetBotGuildsResponse = zod.array(GetBotGuildsResponseItem);

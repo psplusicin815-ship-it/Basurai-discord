@@ -6,4 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./botLog";
+export * from "./botLogsResponse";
+export * from "./botStats";
+export * from "./getBotLogsParams";
+export * from "./guildSummary";
 export * from "./healthStatus";

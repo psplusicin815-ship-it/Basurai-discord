@@ -8,3 +8,46 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface BotStats {
+  totalMessages: number;
+  totalCommands: number;
+  totalGuilds: number;
+  totalUsers: number;
+  todayMessages: number;
+}
+
+export interface BotLog {
+  id: number;
+  guildId: string;
+  guildName: string;
+  channelId: string;
+  channelName: string;
+  userId: string;
+  username: string;
+  messageContent: string;
+  actionType: string;
+  actionResult?: string | null;
+  createdAt: string;
+}
+
+export interface BotLogsResponse {
+  logs: BotLog[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface GuildSummary {
+  guildId: string;
+  guildName: string;
+  messageCount: number;
+}
+
+export type GetBotLogsParams = {
+  page?: number;
+  limit?: number;
+  guildId?: string;
+  userId?: string;
+  actionType?: string;
+};
