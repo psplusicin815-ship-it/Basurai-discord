@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "start": "tsx src/index.ts"
+    "build": "node ./build.mjs",
+    "start": "node --enable-source-maps ./dist/index.mjs"
   },
   "dependencies": {
     "@discordjs/opus": "^0.10.0",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "esbuild": "catalog:",
     "tsx": "catalog:"
   }
 }

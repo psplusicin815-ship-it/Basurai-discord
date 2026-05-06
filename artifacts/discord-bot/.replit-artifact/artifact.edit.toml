@@ -1,0 +1,26 @@
+kind = "api"
+previewPath = "/bot"
+title = "Discord Bot"
+version = "1.0.0"
+
+[[services]]
+localPort = 9000
+name = "Discord Bot"
+paths = ["/bot"]
+
+[services.development]
+run = "pnpm --filter @workspace/discord-bot run dev"
+
+[services.production]
+
+[services.production.build]
+args = ["pnpm", "--filter", "@workspace/discord-bot", "run", "build"]
+
+[services.production.build.env]
+NODE_ENV = "production"
+
+[services.production.run]
+args = ["node", "--enable-source-maps", "artifacts/discord-bot/dist/index.mjs"]
+
+[services.production.run.env]
+NODE_ENV = "production"
