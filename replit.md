@@ -1,45 +1,76 @@
-# [Project name]
+# Discord Assistant (BasurAi)
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+AI destekli Discord botu — Gemini ile sohbet, moderasyon, oyunlar, ses kanalı, hoşgeldin mesajları, reaction roller ve web paneli.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `PORT=5000 pnpm --filter @workspace/api-server run dev` — API sunucusu (port 5000)
+- `pnpm --filter @workspace/discord-bot run dev` — Discord botu
+- `pnpm run typecheck` — tüm paketleri typecheck et
+- `pnpm run build` — typecheck + build
+- `pnpm --filter @workspace/api-spec run codegen` — OpenAPI'dan hook ve Zod şemaları üret
+- `pnpm --filter @workspace/db run push` — DB şema değişikliklerini uygula (dev)
+- Gerekli gizli değerler: `DISCORD_TOKEN`, `DATABASE_URL`, `AI_INTEGRATIONS_GEMINI_*`, `AI_INTEGRATIONS_OPENAI_*`
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- Discord: discord.js v14, @discordjs/voice
+- AI: Google Gemini (chat, görsel), OpenAI (oyunlar, automod)
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
+- API codegen: Orval (OpenAPI spec'ten)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/discord-bot/src/` — bot kaynak kodu
+  - `index.ts` — Discord client, event handler'lar
+  - `ai.ts` — Gemini AI entegrasyonu, action parsing
+  - `actions.ts` — Discord eylemlerini çalıştırır (ban, kick, kanal yönetimi vb.)
+  - `commands.ts` — Slash komutları
+  - `automod.ts` — AI destekli otomatik moderasyon
+  - `games.ts` — Sayı tahmin, kelime zinciri, trivia oyunları
+  - `voice.ts` — Ses kanalı + TTS
+  - `search.ts` — Web arama (Google News, DuckDuckGo, Wikipedia)
+  - `image.ts` — Gemini ile görsel üretimi
+  - `events/welcome.ts` — Hoşgeldin mesajları ve oto-rol
+  - `events/reaction-roles.ts` — Reaction rol sistemi
+  - `guild-sync.ts` — Sunucu kanal/rol önbelleği
+- `artifacts/api-server/src/` — Express API
+  - `routes/bot/` — bot istatistikleri, loglar, guild yönetimi
+- `artifacts/bot-panel/` — React web paneli (henüz kurulmadı)
+- `lib/db/src/schema/` — Drizzle şemaları: bot_logs, guild_settings, reaction_roles, guild_cache
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Bot Gemini ile mesajları analiz eder ve JSON action listesi döndürür; her eylem ayrı fonksiyonla çalıştırılır
+- AutoMod OpenAI ile kural ihlallerini tespit eder, in-memory önbellek ile spam önlenir
+- Guild kanal/rol önbelleği başlangıçta DB'ye yazılır; web paneli bu önbellekten okur
+- Reaction roller DB'de `messageId=null` olarak bekler; bot başlarken mesajları gönderir ve ID'yi günceller
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- AI sohbet (Gemini 2.5 Flash), görsel üretimi, web arama
+- Sunucu yönetimi: ban/kick/mute, kanal/rol işlemleri, etkinlik
+- AutoMod: AI destekli mesaj denetimi (ban/kick/warn/delete)
+- Eğlence: 8-top, zar, yazı-tura, kelime zinciri, sayı oyunu, trivia, roast/compliment
+- Ses kanalı: Türkçe TTS ile sesli yanıt
+- Hoşgeldin sistemi ve reaction rol sistemi
+- Web paneli (bot-panel) üzerinden ayar yönetimi
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Türkçe konuşan kullanıcı
+- Bot adı: BasurAi
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- `pnpm --filter @workspace/db run push` şema değişikliklerinden önce çalıştırılmalı
+- `DISCORD_TOKEN` Replit Secrets'ta saklanmalı, dosyalara yazılmamalı
+- Native paketler (`@discordjs/opus`, `sodium-native`) `pnpm approve-builds` gerektirir
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- See the `pnpm-workspace` skill for workspace structure
