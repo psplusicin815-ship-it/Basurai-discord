@@ -1,10 +1,12 @@
 import { Guild, GuildMember, TextChannel } from "discord.js";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-});
+const openai = process.env.AI_INTEGRATIONS_OPENAI_API_KEY
+  ? new OpenAI({
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+    })
+  : null;
 
 export type AutomodAction = "ban" | "kick" | "warn" | "delete";
 
@@ -43,6 +45,7 @@ export function setAutomodLogChannel(guildId: string, channelId: string) {
 const violationCache = new Map<string, number>();
 
 async function isViolation(content: string, rules: string[]): Promise<{ isViolation: boolean; reason: string }> {
+  if (!openai) return { isViolation: false, reason: "" };
   const rulesText = rules.join(", ");
   const completion = await openai.chat.completions.create({
     model: "gpt-4.1",
