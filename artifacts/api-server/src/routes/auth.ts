@@ -61,8 +61,8 @@ router.get("/callback", async (req, res) => {
 
     if (!tokenRes.ok) {
       const err = await tokenRes.text();
-      console.error("Token exchange failed:", err);
-      res.status(400).send("Token alınamadı");
+      console.error("Token exchange failed:", tokenRes.status, err);
+      res.status(400).send(`Token alınamadı: ${tokenRes.status} — ${err}`);
       return;
     }
 
