@@ -63,3 +63,5 @@ externalPort = 3001
 
 [userenv.shared]
 DASHBOARD_API_KEY = "41b9ba6282a71eca719d8834d23077b4d3ac9def654b47b261908ee8e1a8f1ea"
+DISCORD_REDIRECT_URI = "https://b88b3719-bd50-4781-9be1-fd0c5e034053-00-2n29wlko2pcg5.pike.replit.dev/api/auth/callback"
+FRONTEND_URL = "https://basurai.rf.gd"
