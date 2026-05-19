@@ -11,3 +11,9 @@ id = "ZV-06RyR8T1WpZc0Uj6-6"
 uri = "file://basurai-website.zip"
 type = "unspecified"
 title = "BasurAi Website (Güncellenmiş – API URL hazır)"
+
+[[outputs]]
+id = "wbxdkBzmatRKG_REep0s4"
+uri = "file://basurai-website-htdocs.zip"
+type = "unspecified"
+title = "BasurAi Website — htdocs için hazır"

@@ -25,7 +25,33 @@ app.use(
     },
   }),
 );
-app.use(cors());
+
+const allowedOrigins = [
+  /localhost/,
+  /\.replit\.dev$/,
+  /\.replit\.app$/,
+  /\.infinityfreeapp\.com$/,
+  /\.epizy\.com$/,
+  /\.rf\.gd$/,
+];
+
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(new RegExp(process.env.FRONTEND_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+}
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const allowed = allowedOrigins.some((pattern) =>
+        pattern instanceof RegExp ? pattern.test(origin) : origin === pattern,
+      );
+      callback(null, allowed ? origin : false);
+    },
+    credentials: true,
+  }),
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

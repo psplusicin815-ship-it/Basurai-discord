@@ -1,6 +1,6 @@
+import { useEffect, useState } from "react";
+import { useParams, Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout";
-import { useParams } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft, Save } from "lucide-react";
-import { Link } from "wouter";
+import { fetchMe, fetchGuildCache, fetchGuildSettings, saveGuildSettings } from "@/lib/auth";
 
 const settingsSchema = z.object({
   welcomeEnabled: z.boolean().default(false),
@@ -26,54 +26,13 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 export default function GuildSettings() {
   const { guildId } = useParams<{ guildId: string }>();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  const { data: cache, isLoading: cacheLoading } = useQuery({
-    queryKey: ["guild-cache", guildId],
-    queryFn: async () => {
-      const res = await fetch(`/api/bot/guild/${guildId}/cache`);
-      if (!res.ok) throw new Error("Sunucu önbelleği alınamadı");
-      return res.json();
-    },
-    enabled: !!guildId,
-  });
-
-  const { data: settings, isLoading: settingsLoading } = useQuery({
-    queryKey: ["guild-settings", guildId],
-    queryFn: async () => {
-      const res = await fetch(`/api/bot/guild/${guildId}/settings`);
-      if (!res.ok) throw new Error("Sunucu ayarları alınamadı");
-      return res.json();
-    },
-    enabled: !!guildId,
-  });
-
-  const updateSettings = useMutation({
-    mutationFn: async (data: SettingsFormValues) => {
-      const res = await fetch(`/api/bot/guild/${guildId}/settings`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error("Ayarlar kaydedilemedi");
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Ayarlar kaydedildi",
-        description: "Sunucu ayarları başarıyla güncellendi.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["guild-settings", guildId] });
-    },
-    onError: () => {
-      toast({
-        title: "Hata",
-        description: "Ayarlar kaydedilemedi. Lütfen tekrar deneyin.",
-        variant: "destructive",
-      });
-    },
-  });
+  const [cache, setCache] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [authed, setAuthed] = useState<boolean | null>(null);
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -84,16 +43,61 @@ export default function GuildSettings() {
       autoRoleEnabled: false,
       autoRoleId: "",
     },
-    values: settings || undefined,
   });
 
-  const onSubmit = (data: SettingsFormValues) => {
-    updateSettings.mutate(data);
-  };
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const me = await fetchMe();
+      if (!me) { setAuthed(false); setLoading(false); return; }
+      setAuthed(true);
 
-  const isLoading = cacheLoading || settingsLoading;
+      try {
+        const [c, s] = await Promise.all([
+          fetchGuildCache(guildId),
+          fetchGuildSettings(guildId),
+        ]);
+        setCache(c);
+        form.reset({
+          welcomeEnabled: s.welcomeEnabled ?? false,
+          welcomeChannelId: s.welcomeChannelId ?? "",
+          welcomeMessage: s.welcomeMessage ?? "",
+          autoRoleEnabled: s.autoRoleEnabled ?? false,
+          autoRoleId: s.autoRoleId ?? "",
+        });
+      } catch {
+        toast({ title: "Hata", description: "Sunucu verileri yüklenemedi.", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [guildId]);
 
-  if (isLoading) {
+  async function onSubmit(data: SettingsFormValues) {
+    setSaving(true);
+    try {
+      await saveGuildSettings(guildId, data);
+      toast({ title: "Kaydedildi", description: "Sunucu ayarları başarıyla güncellendi." });
+    } catch {
+      toast({ title: "Hata", description: "Ayarlar kaydedilemedi. Lütfen tekrar deneyin.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (authed === false) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-24 max-w-lg text-center">
+          <p className="text-muted-foreground mb-4">Bu sayfayı görüntülemek için giriş yapman gerekiyor.</p>
+          <Button onClick={() => setLocation("/dashboard")}>Giriş Sayfasına Git</Button>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (loading) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-12 max-w-3xl flex items-center justify-center min-h-[50vh]">
@@ -120,13 +124,11 @@ export default function GuildSettings() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            {/* Welcome System */}
+            {/* Hoşgeldin Sistemi */}
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardHeader>
                 <CardTitle>Hoşgeldin Sistemi</CardTitle>
-                <CardDescription>
-                  Yeni üyeler için hoşgeldin mesajlarını yapılandır.
-                </CardDescription>
+                <CardDescription>Yeni üyeler için hoşgeldin mesajlarını yapılandır.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
@@ -136,21 +138,14 @@ export default function GuildSettings() {
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border/50 p-4">
                       <div className="space-y-0.5">
                         <FormLabel className="text-base">Hoşgeldin Mesajlarını Etkinleştir</FormLabel>
-                        <FormDescription>
-                          Sunucuya yeni biri katıldığında mesaj gönderir.
-                        </FormDescription>
+                        <FormDescription>Sunucuya yeni biri katıldığında mesaj gönderir.</FormDescription>
                       </div>
                       <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="switch-welcome-enabled"
-                        />
+                        <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-welcome-enabled" />
                       </FormControl>
                     </FormItem>
                   )}
                 />
-
                 {form.watch("welcomeEnabled") && (
                   <>
                     <FormField
@@ -167,20 +162,15 @@ export default function GuildSettings() {
                             </FormControl>
                             <SelectContent>
                               {cache?.channels?.map((c: { id: string; name: string }) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  #{c.name}
-                                </SelectItem>
+                                <SelectItem key={c.id} value={c.id}>#{c.name}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <FormDescription>
-                            Hoşgeldin mesajlarının gönderileceği kanal.
-                          </FormDescription>
+                          <FormDescription>Hoşgeldin mesajlarının gönderileceği kanal.</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="welcomeMessage"
@@ -195,9 +185,7 @@ export default function GuildSettings() {
                               value={field.value || ""}
                             />
                           </FormControl>
-                          <FormDescription>
-                            Kullanılabilir değişkenler: {"{user}"}, {"{server}"}
-                          </FormDescription>
+                          <FormDescription>Kullanılabilir değişkenler: {"{user}"}, {"{server}"}</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -207,13 +195,11 @@ export default function GuildSettings() {
               </CardContent>
             </Card>
 
-            {/* Auto Role */}
+            {/* Otomatik Rol */}
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardHeader>
                 <CardTitle>Otomatik Rol</CardTitle>
-                <CardDescription>
-                  Yeni üyelere otomatik olarak bir rol ata.
-                </CardDescription>
+                <CardDescription>Yeni üyelere otomatik olarak bir rol ata.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <FormField
@@ -223,21 +209,14 @@ export default function GuildSettings() {
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border border-border/50 p-4">
                       <div className="space-y-0.5">
                         <FormLabel className="text-base">Otomatik Rolü Etkinleştir</FormLabel>
-                        <FormDescription>
-                          Kullanıcılar katıldığında anında bir rol atar.
-                        </FormDescription>
+                        <FormDescription>Kullanıcılar katıldığında anında bir rol atar.</FormDescription>
                       </div>
                       <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="switch-autorole-enabled"
-                        />
+                        <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-autorole-enabled" />
                       </FormControl>
                     </FormItem>
                   )}
                 />
-
                 {form.watch("autoRoleEnabled") && (
                   <FormField
                     control={form.control}
@@ -253,15 +232,11 @@ export default function GuildSettings() {
                           </FormControl>
                           <SelectContent>
                             {cache?.roles?.map((r: { id: string; name: string }) => (
-                              <SelectItem key={r.id} value={r.id}>
-                                @{r.name}
-                              </SelectItem>
+                              <SelectItem key={r.id} value={r.id}>@{r.name}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <FormDescription>
-                          Botun rolünün bu rolden daha üstte olduğundan emin ol.
-                        </FormDescription>
+                        <FormDescription>Botun rolünün bu rolden daha üstte olduğundan emin ol.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -269,17 +244,8 @@ export default function GuildSettings() {
                 )}
               </CardContent>
               <CardFooter className="pt-6">
-                <Button
-                  type="submit"
-                  disabled={updateSettings.isPending}
-                  className="w-full sm:w-auto"
-                  data-testid="button-save-settings"
-                >
-                  {updateSettings.isPending ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
+                <Button type="submit" disabled={saving} className="w-full sm:w-auto" data-testid="button-save-settings">
+                  {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                   Değişiklikleri Kaydet
                 </Button>
               </CardFooter>
