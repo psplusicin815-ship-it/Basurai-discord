@@ -14,12 +14,34 @@ import { enableAutomod, disableAutomod, getAutomodConfig } from "./automod.js";
 import { generateImage } from "./image.js";
 import { webSearch } from "./search.js";
 import { summarizeSearchResults } from "./ai.js";
+import { GoogleGenAI } from "@google/genai";
 import { joinVoice, leaveVoice, isInVoice } from "./voice.js";
 import {
   startNumberGame, guessNumber, getNumberGame, endNumberGame,
   startWordChain, playWordChain, getWordChain, endWordChain,
   generateTrivia, startTrivia, generateRoast, generateCompliment,
 } from "./games.js";
+
+const gemini = process.env.AI_INTEGRATIONS_GEMINI_API_KEY
+  ? new GoogleGenAI({
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+      httpOptions: { apiVersion: "", baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL },
+    })
+  : null;
+
+async function generateJoke(): Promise<string> {
+  if (gemini) {
+    try {
+      const res = await gemini.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: "Türkçe komik bir şaka söyle. Sadece şakayı yaz, başka bir şey ekleme. Kısa ve eğlenceli olsun." }] }],
+      });
+      const text = res.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (text) return text;
+    } catch { /* fallback */ }
+  }
+  return JOKES[Math.floor(Math.random() * JOKES.length)];
+}
 
 const EIGHT_BALL_ANSWERS = [
   "Kesinlikle evet! ✅",
@@ -335,13 +357,14 @@ export async function handleSlashCommand(interaction: ChatInputCommandInteractio
       }
 
       case "şaka": {
-        const joke = JOKES[Math.floor(Math.random() * JOKES.length)];
+        await interaction.deferReply();
+        const joke = await generateJoke();
         const embed = new EmbedBuilder()
           .setTitle("😂 Günün Şakası")
           .setDescription(joke)
           .setColor(Colors.Yellow)
           .setFooter({ text: "BasurAi şaka yapar 😄" });
-        await interaction.reply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embed] });
         break;
       }
 
