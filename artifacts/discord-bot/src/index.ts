@@ -30,6 +30,7 @@ import { speakInVoice, isInVoice } from "./voice.js";
 import {
   getNumberGame, guessNumber, endNumberGame,
   getWordChain, playWordChain, endWordChain,
+  getTrivia, answerTrivia, endTrivia,
 } from "./games.js";
 import { handleMemberJoin } from "./events/welcome.js";
 import { handleReactionAdd, handleReactionRemove, deployPendingReactionRoles } from "./events/reaction-roles.js";
@@ -198,6 +199,28 @@ client.on(Events.MessageCreate, async (message: Message) => {
       }
       return;
     }
+  }
+
+  // Trivia oyunu
+  const triviaGame = getTrivia(message.channelId);
+  if (triviaGame && /^[abcdABCD]$/.test(rawMsg)) {
+    const res = answerTrivia(message.channelId, rawMsg);
+    if (res) {
+      const optionLetters = ["A", "B", "C", "D"];
+      const correctIdx = triviaGame.options.indexOf(res.answer);
+      const correctLetter = optionLetters[correctIdx] ?? "?";
+      if (res.correct) {
+        await message.reply(`✅ **Doğru!** Cevap **${correctLetter}) ${res.answer}** 🎉`);
+      } else {
+        await message.reply(`❌ **Yanlış!** Doğru cevap **${correctLetter}) ${res.answer}**`);
+      }
+      return;
+    }
+  }
+  if (triviaGame && rawMsg.toLowerCase() === "bitir") {
+    endTrivia(message.channelId);
+    await message.reply("🛑 Trivia oyunu bitti!");
+    return;
   }
 
   // ===== BOT MENTION KONTROLÜ =====
