@@ -34,7 +34,7 @@ export async function editImage(
 ): Promise<Buffer> {
   if (!ai) throw new Error("Gemini API anahtarı ayarlanmamış.");
   const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash-exp",
+    model: "gemini-2.5-flash-image",
     contents: [
       {
         role: "user",
