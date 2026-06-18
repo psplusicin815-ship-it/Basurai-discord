@@ -21,6 +21,7 @@ import {
   removeImageBackground,
   isBackgroundRemovalRequest,
 } from "./vision.js";
+import { editImage, isImageEditRequest } from "./image.js";
 import { executeAction, executeImageAction } from "./actions.js";
 import { logBotActivity } from "./logger.js";
 import { webSearch } from "./search.js";
@@ -262,6 +263,27 @@ client.on(Events.MessageCreate, async (message: Message) => {
         const attachment = new AttachmentBuilder(resultBuffer, { name: "arka_plan_silindi.png" });
         await processingMsg.edit("✅ Arka plan başarıyla silindi!");
         await imgTextChannel.send({ files: [attachment] });
+      } else if (content && isImageEditRequest(content)) {
+        // Görsel düzenleme (AI ile)
+        const processingMsg = await message.reply(
+          `✏️ Görsel düzenleniyor: **${content}**... Biraz bekle!`
+        );
+        const imgData = await downloadImage(imageAttachments[0].url);
+        const editedBuffer = await editImage(imgData.buffer, imgData.mimeType, content);
+        const attachment = new AttachmentBuilder(editedBuffer, { name: "duzenlendi.png" });
+        await processingMsg.edit("✅ Görsel düzenlendi!");
+        await imgTextChannel.send({ files: [attachment] });
+        await logBotActivity({
+          guildId: message.guild.id,
+          guildName: message.guild.name,
+          channelId: message.channelId,
+          channelName: imgChannelName,
+          userId: message.author.id,
+          username: message.author.username,
+          messageContent: content,
+          actionType: "image_edit",
+          actionResult: "Görsel düzenlendi",
+        });
       } else {
         // Görsel analizi
         const imageDataList = await Promise.all(
