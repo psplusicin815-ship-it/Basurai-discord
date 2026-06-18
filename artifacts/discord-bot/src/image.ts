@@ -1,14 +1,17 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY!,
-  httpOptions: {
-    apiVersion: "",
-    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-  },
-});
+const ai = process.env.AI_INTEGRATIONS_GEMINI_API_KEY
+  ? new GoogleGenAI({
+      apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+      httpOptions: {
+        apiVersion: "",
+        baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+      },
+    })
+  : null;
 
 export async function generateImage(prompt: string): Promise<Buffer> {
+  if (!ai) throw new Error("Gemini API anahtarı ayarlanmamış.");
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash-image",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -29,6 +32,7 @@ export async function editImage(
   mimeType: string,
   instruction: string
 ): Promise<Buffer> {
+  if (!ai) throw new Error("Gemini API anahtarı ayarlanmamış.");
   const response = await ai.models.generateContent({
     model: "gemini-2.0-flash-exp",
     contents: [
